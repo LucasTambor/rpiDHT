@@ -117,6 +117,7 @@ int main(int argc, char *argv[]) {
   pthread_join(thread_id_btn, NULL);
   pthread_join(thread_id_hb, NULL);
   pthread_join(thread_id_led, NULL);
+  pthread_join(thread_id_dht, NULL);
 
   // Quando a gente ta manipulando IOs... Eh bom "unexport" quando acaba
   pthread_mutex_destroy(&lock);
@@ -181,7 +182,7 @@ void *thread_btn_read(void *arg) {
     // ve se da pra mexer na variavel de estado do botao
     estado_botao = (GPIORead(BTN1) == 0 ? false : true);
     if (!estado_botao) {
-      printf("Botao pressionado!\n");
+      fprintf(stderr, "Botao pressionado!\n");
       // Usamos o muda_estado_pisca para controlar o estado do led2/pisca controlado
       pthread_mutex_lock(&lock);
       muda_estado_pisca = true;
@@ -195,20 +196,20 @@ void *thread_btn_read(void *arg) {
 
 
 void *thread_dht_read(void *arg) {
-  int temperatura = 0;
-  int umidade = 0;
+  float temperatura = 0;
+  float umidade = 0;
 
   dht_configure(DHT_SENSOR_TYPE, DHT);
 
   while(!terminateSignal)
   {
-    if(!read_dht_data(&temperatura, &umidade))
+    if(read_dht_data(&temperatura, &umidade))
     {
-      printf("PROBLEMA NA LEITURA DO DHT");
+      fprintf(stderr, "PROBLEMA NA LEITURA DO DHT");
     }else{
-      printf("Leitura bem sucedida: \n");
-      printf("Temperatura: %.1f\n", temperatura);
-      printf("Umidade: %.1f\n", umidade);
+      fprintf(stderr, "Leitura bem sucedida: \n");
+      fprintf(stderr, "Temperatura: %.1f\n", temperatura);
+      fprintf(stderr, "Umidade: %.1f\n", umidade);
 
     }
     usleep(2*1000*1000);
@@ -221,7 +222,7 @@ void *thread_dht_read(void *arg) {
 // Função para lidar com sinalização de eventos
 void sigintHandler(int sig_num) 
 { 
-  printf("\n Terminate \n"); 
+  fprintf(stderr, "\n Terminate \n"); 
   terminateSignal = 1;
 } 
 

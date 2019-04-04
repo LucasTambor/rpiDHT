@@ -42,7 +42,6 @@ int read_dht_data(float* temperature, float* humidity)
 		while ( GPIORead(PIN_DHT) == laststate )
 		{
 			counter++;
-            // TODO
 			usleep( 1 );
 			if ( counter == 255 )
 			{
@@ -52,7 +51,9 @@ int read_dht_data(float* temperature, float* humidity)
 		laststate = GPIORead(PIN_DHT);
 
 		if ( counter == 255 )
+        {
 			break;
+        }
 
 		/* ignore first 3 transitions */
 		if ( (i >= 4) && (i % 2 == 0) )
@@ -63,7 +64,12 @@ int read_dht_data(float* temperature, float* humidity)
 				data[j / 8] |= 1;
 			j++;
 		}
+
+        
 	}
+
+    fprintf(stderr, "i: %d \n", i);
+    fprintf(stderr, "j: %d\n", j);
 
 	/*
 	 * check we read 40 bits (8bit x 5 ) + verify checksum in the last byte
@@ -90,7 +96,7 @@ int read_dht_data(float* temperature, float* humidity)
 
         *humidity = h;
         *temperature = c;
-
+        fprintf(stderr, "Humidity = %.1f %% Temperature = %.1f *C (%.1f *F)\n", h, c, f );
         return 0;
 	}else  {
         return 1;

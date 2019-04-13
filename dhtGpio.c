@@ -1,6 +1,6 @@
 /**
  *  UNISAL 2018 - Sistemas Operacionais Embarcados - Linux Embarcado
- *  Controle de GPIO via Sysfs
+ *  Controle de GPIO e leitura de temperatura e umidade através de threads 
  */
 
 // Inclusao de bibliotecas necessarias
@@ -16,15 +16,6 @@
 #include "gpioFileSys.h"
 #include "DHT.h"
 
-
-// Definicoes de Referencias para o Codigo
-//define APELIDO PRA_ALGUMA_COISA
-#define IN		0
-#define OUT 	1
-
-#define LOW 	0
-#define HIGH 	1
-
 #define LED1	23
 #define LED2	24
 #define BTN1	25
@@ -32,11 +23,18 @@
 
 #define DHT   21
 #define DHT_SENSOR_TYPE  DHT_11
+
+
+#define MAXTIMINGS 100
+#define DHT11 11
+#define DHT22 22
+#define AM2302 22
+
 // Variaveis de Referencia para Operacao
 bool estado_botao = true; // botao eh ativado em false/0 -> pull-up!
 bool muda_estado_pisca = false; // inicialmente nao mudamos estado de pisca_led
 int led_control = 0;
-volatile bool terminateSignal = false;
+volatile bool terminateSignal = 0;
 pthread_mutex_t lock;
 pthread_t thread_id_hb;
 pthread_t thread_id_led;
@@ -63,25 +61,26 @@ void *thread_led_ctrl(void *arg);
 void *thread_btn_read(void *arg);
 void *thread_dht_read(void *arg);
 void sigintHandler(int sig_num); 
+int readDHT();
 
 
 int main(int argc, char *argv[]) {
-  // Quantidade de vezes pra Execucao do codigo
-  int repeat = 10;
-  int i = 0;
 
-  // Unexporta os pinos
+  // Unexport the pin just to make shure
   GPIOUnexport(LED1);
   GPIOUnexport(LED2);
   GPIOUnexport(BTN1);
-  // Exporta agora, certo
+  // Export them
   GPIOExport(LED1);
   GPIOExport(LED2);
   GPIOExport(BTN1);
-  // Define as direcoes de cada um
+  // Define directinons
   GPIODirection(LED1, OUT);
   GPIODirection(LED2, OUT);
   GPIODirection(BTN1, IN);
+
+  fprintf(stderr, "Atividade DHT !\n");
+
   
 	// Inicializa threads e mutexes
   if (pthread_mutex_init(&lock, NULL) != 0) {
@@ -110,21 +109,32 @@ int main(int argc, char *argv[]) {
 
   signal(SIGINT, sigintHandler);
   
-  // Trava momentaneamente nosso programa aqui
-  while(!terminateSignal) {}
   
-  // Finaliza as threads
+  while(!terminateSignal) {
+
+    
+  }
+  
+  // End threads
+  fprintf(stderr, "Joining Button Read\n");
   pthread_join(thread_id_btn, NULL);
+  fprintf(stderr, "Joining Heart Beat\n");
   pthread_join(thread_id_hb, NULL);
+  fprintf(stderr, "Joining Led Control\n");
   pthread_join(thread_id_led, NULL);
+  fprintf(stderr, "Joining DHT Control\n");
   pthread_join(thread_id_dht, NULL);
 
-  // Quando a gente ta manipulando IOs... Eh bom "unexport" quando acaba
+  // Destroy mutex
+  fprintf(stderr, "Destroy Mutex\n");
   pthread_mutex_destroy(&lock);
 
+  // Unexport pins
+  fprintf(stderr, "Unexporting Pins\n");
   GPIOUnexport(LED1);
   GPIOUnexport(LED2);
   GPIOUnexport(BTN1);
+  GPIOUnexport(DHT);
 
   return 0;
 }
@@ -205,12 +215,11 @@ void *thread_dht_read(void *arg) {
   {
     if(read_dht_data(&temperatura, &umidade))
     {
-      fprintf(stderr, "PROBLEMA NA LEITURA DO DHT");
+      fprintf(stderr, "PROBLEMA NA LEITURA DO DHT\n");
     }else{
       fprintf(stderr, "Leitura bem sucedida: \n");
       fprintf(stderr, "Temperatura: %.1f\n", temperatura);
       fprintf(stderr, "Umidade: %.1f\n", umidade);
-
     }
     usleep(2*1000*1000);
 
@@ -222,7 +231,7 @@ void *thread_dht_read(void *arg) {
 // Função para lidar com sinalização de eventos
 void sigintHandler(int sig_num) 
 { 
-  fprintf(stderr, "\n Terminate \n"); 
+  fprintf(stderr, "\nTerminate!! \n"); 
   terminateSignal = 1;
 } 
 

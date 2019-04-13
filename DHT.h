@@ -7,7 +7,16 @@
 #include "gpioFileSys.h"
 #include <unistd.h>
 
-#define MAX_TIMINGS	85
+#define IN		0
+#define OUT 	1
+
+#define LOW 	0
+#define HIGH 	1
+
+#define MAX_TIMINGS	100
+#define MAX_COUNTER 10000
+
+#define DEBUG_DHT
 
 typedef enum  
 {
